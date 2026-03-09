@@ -607,7 +607,7 @@ function startOSC()
 			logger.error(err.address + " is not responding");
 			return;
 		}
-		console.error("UDP error", err);
+		logger.error("UDP error", err);
 	});
 
 	udpPort.on("message", function(oscMsg, timeTag, info)
