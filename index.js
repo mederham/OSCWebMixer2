@@ -287,7 +287,7 @@ function startServer()
 		}
 
 		//force webmixer client and admin connections to reload
-		closeAllConnections();
+		closeAllWebsocketConnections();
 
 		if(oscPortChanged)
 		{
@@ -297,7 +297,7 @@ function startServer()
 
 		if(portChanged)
 		{
-			closeAllConnections();
+			closeAllWebsocketConnections();
 
 			//close web socket server
 			wss.close();
@@ -305,10 +305,10 @@ function startServer()
 			//close web server
 			server.close();
 
-			logger.warn(`Server port has changed. Please visit http://${getServerURL()} to continue.`);
+			logger.warn(`Server port has changed. Please visit ${getServerURL()} to continue.`);
 
 			//respond with redirection to the new port
-			res.send(`<script>document.location.href="http://${getServerURL()}/admin";</script>`);
+			res.send(`<script>document.location.href="${getServerURL()}/admin";</script>`);
 
 			startServer();
 			return;
@@ -510,46 +510,6 @@ function startWebSocketServer() {
 	});
 }
 
-/**
- * Write the current configuration to disk
- */
-function writeConfig()
-{
-	let err = fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
-	if(err)
-	{
-		throw err;
-	}
-	logger.debug("Config Saved.");
-}
-
-/**
- * Load config from disk. If it doesn't exist then use default values.
- */
-function loadConfig()
-{
-	if(fs.existsSync("config.json"))
-	{
-		return JSON.parse(
-			fs.readFileSync("config.json", "utf-8")
-		)
-	}
-	
-	return {
-		debug: false,
-		server: {
-			port: 80
-		},
-		osc: {
-			port: 8000
-		},
-		desk: {
-			ip: "",
-			port: 9000
-		},
-		external: []
-	};
-}
 
 /**
  * Callback to request values from the desk. Will keep trying until values have loaded.
@@ -599,7 +559,7 @@ function startOSC()
 		{
 			cache.clear();
 			loaded = false;
-			closeAllConnections();
+			closeAllWebsocketConnections();
 			fetchValues();
 			return;
 		}
@@ -706,7 +666,7 @@ function processSnapshotMsg(oscMsg)
 /**
  * Close all webmixer connections
  */
-function closeAllConnections()
+function closeAllWebsocketConnections()
 {
 	for(let connection of connections)
 	{
