@@ -67,12 +67,6 @@ let server = null;
  */
 let wss = null;
 
-/**
- * Loading Spinner
- * @type {import('ora').Ora}
- */
-let spinner = null;
-
 const mixServerIP = getMainIPAddress();
 
 
@@ -153,7 +147,7 @@ function buildConfig()
 	}
 
 	return JSON.stringify({
-		"config": {		// TODO name is not changed because frontend depends on it
+		"config": {
 			channels: channels,
 			aux: auxilaries,
 			snapshot: currentSnapshotName
@@ -588,7 +582,7 @@ function startWebSocketServer() {
 		//save the new connection
 		connections.push(socket);
 
-		logger.debug("New websockets connection")
+		logger.info(`New WebSocket client connected. (Total: ${connections.length})`);
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -597,7 +591,7 @@ function startWebSocketServer() {
 		socket.on('message', function message(data)
 		{
 			let oscMsg = JSON.parse(data);
-			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message recieved from websocket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
@@ -624,6 +618,11 @@ function startWebSocketServer() {
 			maybeCacheResponse(oscMsg);
 
 			broadcast(oscMsg, this);
+		});
+
+		socket.on("close", function(code, reason) {
+			connections = connections.filter(conn => conn !== socket);
+			logger.info(`Websocket client disconnected. (Total: ${connections.length})`);
 		});
 	});
 
@@ -725,7 +724,7 @@ function startOSC()
 	udpPort.on("ready", fetchValues);
 
 	udpPort.open();
-	spinner = logger.loading("Loading values from mixing desk...").start();
+	logger.info("Loading values from mixing desk...");
 }
 
 /**
@@ -863,12 +862,12 @@ function stopOSC()
 function maybeCacheResponse(msg)
 {
 	let matchAddresses = [
-		/^\/Console\/Input_Channels$/, //cache total number of channels
+		/^\/Input_Channels\/(\d{1,3})\/Aux_Send\/(\d{1,3})\/send_level$/, //cache channel aux level
+		/^\/Input_Channels\/(\d{1,3})\/Aux_Send\/(\d{1,3})\/send_pan$/, //cache channel aux pan
+		/^\/Input_Channels\/(\d{1,3})\/Channel_Input\/name$/, //cache channel name
 		/^\/Aux_Outputs\/([0-9]+)\/Buss_Trim\/name$/, //cache aux name
 		/^\/Console\/Aux_Outputs\/modes$/, //cache aux modes (stereo or mono)
-		/^\/Input_Channels\/([0-9]+)\/Channel_Input\/name$/, //cache channel name
-		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_level$/, //cache channel aux level
-		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/ //cache channel aux pan
+		/^\/Console\/Input_Channels$/ //cache total number of channels
 	];
 
 	for(let address of matchAddresses)
@@ -929,7 +928,7 @@ function loadNextRequiredParameter()
 	cachePrimeInterval = setInterval(primeCache, 100);
 
 	loaded = true;
-	spinner.succeed("Loaded values from mixing desk.");
+	logger.info("Loaded values from mixing desk.");
 
 	startWebSocketServer();
 	logger.info("Webmixer ready to use.");
