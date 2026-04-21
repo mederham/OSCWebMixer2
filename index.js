@@ -147,7 +147,7 @@ function buildConfig()
 	}
 
 	return JSON.stringify({
-		"config": {		// TODO name is not changed because frontend depends on it
+		"config": {
 			channels: channels,
 			aux: auxilaries,
 			snapshot: currentSnapshotName
@@ -582,7 +582,7 @@ function startWebSocketServer() {
 		//save the new connection
 		connections.push(socket);
 
-		logger.debug("New websockets connection")
+		logger.info(`New WebSocket client connected. (Total: ${connections.length})`);
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -591,7 +591,7 @@ function startWebSocketServer() {
 		socket.on('message', function message(data)
 		{
 			let oscMsg = JSON.parse(data);
-			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message recieved from websocket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
@@ -618,6 +618,11 @@ function startWebSocketServer() {
 			maybeCacheResponse(oscMsg);
 
 			broadcast(oscMsg, this);
+		});
+
+		socket.on("close", function(code, reason) {
+			connections = connections.filter(conn => conn !== socket);
+			logger.info(`Websocket client disconnected. (Total: ${connections.length})`);
 		});
 	});
 
